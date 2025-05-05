@@ -21,18 +21,14 @@
         "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/b917f565b1d716f3cc09b480908bfe712ab980a016e76113d5ba67b345aa3088.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
-        "additionalDependencies": [
-          "dev-aws-cdk-fanout.assets"
-        ],
+        "additionalDependencies": ["dev-aws-cdk-fanout.assets"],
         "lookupRole": {
           "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-${AWS::Region}",
           "requiresBootstrapStackVersion": 8,
           "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
         }
       },
-      "dependencies": [
-        "dev-aws-cdk-fanout.assets"
-      ],
+      "dependencies": ["dev-aws-cdk-fanout.assets"],
       "metadata": {
         "/dev-aws-cdk-fanout/dev-aws-cdk-fanout-topic/Resource": [
           {
