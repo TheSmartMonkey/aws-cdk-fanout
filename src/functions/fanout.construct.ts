@@ -1,4 +1,11 @@
-import { aws_apigateway as apigateway, aws_iam as iam, aws_sns as sns } from 'aws-cdk-lib';
+import {
+  aws_apigateway as apigateway,
+  Duration,
+  aws_iam as iam,
+  aws_sns as sns,
+  aws_sqs as sqs,
+  aws_sns_subscriptions as subs,
+} from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
 export interface FanoutConstructProps {
@@ -126,6 +133,25 @@ export class FanoutConstruct extends Construct {
 
     // Grant permissions to API Gateway to publish to SNS
     this.topic.grantPublish(apiGatewayRole);
+
+    // SQS Queues
+    const queue = new sqs.Queue(this, `${id}-queue`, {
+      queueName: `${id}-queue`,
+      visibilityTimeout: Duration.minutes(15),
+      // deadLetterQueue: {
+      //   queue: dlq,
+      //   maxReceiveCount: 3,
+      // },
+      // ...queueOptions,
+    });
+
+    // Topic subscription
+    this.topic.addSubscription(
+      new subs.SqsSubscription(queue, {
+        // deadLetterQueue: sqsFailureDlq,
+        // filterPolicyWithMessageBody: snsFilter,
+      }),
+    );
 
     // const lambdaRole = createLambdaRoles(this);
     // addNewQueues({ stack, topic, sqsFailureDlq, lambdaRole, dotEnv: props.dotEnv, ssmEnv: props.ssmEnv });
