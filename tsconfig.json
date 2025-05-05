@@ -3,7 +3,7 @@
     "lib": ["DOM", "ESNext"],
     "module": "commonjs",
     "moduleResolution": "node",
-    "removeComments": true,
+    "removeComments": false,
     "sourceMap": true,
     "target": "ES2021",
     "outDir": "./dist",

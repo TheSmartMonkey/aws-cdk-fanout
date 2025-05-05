@@ -1,4 +1,4 @@
-import { SnsTopicConstruct } from 'aws-cdk-fanout';
+import { FanoutConstruct } from 'aws-cdk-fanout';
 import { App, Stack, StackProps } from 'aws-cdk-lib';
 
 interface MyStackProps extends StackProps {
@@ -10,7 +10,10 @@ export function createCdkStack(app: App, id: string, props: MyStackProps): Stack
   const stack = new Stack(app, id, props);
 
   // SNS topic
-  const topic = new SnsTopicConstruct(stack, 'SnsTopicConstruct');
+  const fanout = new FanoutConstruct(stack, 'FanoutConstruct', {
+    stage: props.stage,
+    region: props.region,
+  });
 
   return stack;
 }
