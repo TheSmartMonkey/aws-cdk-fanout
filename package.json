@@ -1,0 +1,46 @@
+{
+  "name": "create-typescript-npm-library",
+  "description": "Simple typescript app with jest to create a npm library with types",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "npm run build && npm run start:prod",
+    "start:prod": "cd debug && npm run start",
+    "build": "tsc && tsc-alias",
+    "fix": "npm run lint && npm run format",
+    "lint": "eslint src --ext .ts --fix",
+    "lint:check": "eslint src --ext .ts",
+    "format": "npx prettier --write .",
+    "format:check": "npx prettier --check .",
+    "test": "jest",
+    "pub": "npm run build && npm version patch && npm publish"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.16.0",
+    "eslint": "^8.30.0",
+    "eslint-plugin-jest": "^28.9.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.10",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.2"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/TheSmartMonkey/create-typescript-npm-library/issues"
+  },
+  "homepage": "https://github.com/TheSmartMonkey/create-typescript-npm-library#readme",
+  "keywords": [
+    "npm",
+    "library",
+    "template",
+    "typescript"
+  ]
+}
