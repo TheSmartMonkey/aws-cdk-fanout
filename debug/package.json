@@ -1,9 +1,14 @@
 {
   "name": "debug",
   "scripts": {
-    "start": "npx ts-node main.ts"
+    "cdk": "cdk",
+    "init": "cdk bootstrap",
+    "deploy": "npm run init && cdk deploy --region eu-west-3 --require-approval never",
+    "undeploy": "cdk destroy --region eu-west-3"
   },
   "dependencies": {
-    "create-typescript-npm-library": "file:../dist"
+    "aws-cdk-lib": "^2.194.0",
+    "constructs": "^10.4.2",
+    "aws-cdk-fanout": "file:../dist"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "create-typescript-npm-library",
+  "name": "aws-cdk-fanout",
   "description": "Simple typescript app with jest to create a npm library with types",
   "version": "0.0.1",
   "main": "dist/index.js",
@@ -15,6 +15,10 @@
     "format:check": "npx prettier --check .",
     "test": "jest",
     "pub": "npm run build && npm version patch && npm publish"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.194.0",
+    "constructs": "^10.4.2"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
@@ -34,13 +38,14 @@
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/TheSmartMonkey/create-typescript-npm-library/issues"
+    "url": "https://github.com/TheSmartMonkey/aws-cdk-fanout/issues"
   },
-  "homepage": "https://github.com/TheSmartMonkey/create-typescript-npm-library#readme",
+  "homepage": "https://github.com/TheSmartMonkey/aws-cdk-fanout#readme",
   "keywords": [
-    "npm",
-    "library",
-    "template",
-    "typescript"
+    "aws",
+    "aws-cdk",
+    "fanout",
+    "webhook",
+    "cdk-construct"
   ]
 }
