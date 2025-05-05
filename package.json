@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "start": "npm run build && npm run start:prod",
-    "start:prod": "cd debug && npm run start",
+    "start": "npm run build && npm run deploy",
+    "deploy": "cd debug && npm run deploy",
     "build": "tsc && tsc-alias",
     "fix": "npm run lint && npm run format",
     "lint": "eslint src --ext .ts --fix",

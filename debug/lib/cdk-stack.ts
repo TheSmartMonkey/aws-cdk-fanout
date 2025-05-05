@@ -1,5 +1,5 @@
+import { SnsTopicConstruct } from 'aws-cdk-fanout';
 import { App, Stack, StackProps } from 'aws-cdk-lib';
-import * as sns from 'aws-cdk-lib/aws-sns';
 
 interface MyStackProps extends StackProps {
   stage: string;
@@ -10,10 +10,7 @@ export function createCdkStack(app: App, id: string, props: MyStackProps): Stack
   const stack = new Stack(app, id, props);
 
   // SNS topic
-  const topic = new sns.Topic(stack, `${stack.stackName}-topic`, {
-    displayName: `${stack.stackName}-topic`,
-    topicName: `${stack.stackName}-topic`,
-  });
+  const topic = new SnsTopicConstruct(stack, 'SnsTopicConstruct');
 
   return stack;
 }

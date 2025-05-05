@@ -1,5 +1,5 @@
 // Functions
-export * from '@/functions/s3.construct';
+export * from '@/functions/sns.construct';
 
 // Models
 // export * from '@/models/hello.model';
