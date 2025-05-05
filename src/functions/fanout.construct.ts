@@ -80,12 +80,40 @@ export class FanoutConstruct extends Construct {
         },
         requestTemplates: {
           'application/json': `Action=Publish&TopicArn=$util.urlEncode('${this.topic.topicArn}')&Message=$util.urlEncode($input.body)`,
+          'application/x-www-form-urlencoded': `Action=Publish&TopicArn=$util.urlEncode('${this.topic.topicArn}')&Message=$util.urlEncode($input.body)`,
         },
         integrationResponses: [
           {
             statusCode: '200',
             responseTemplates: {
-              'application/json': JSON.stringify({ message: 'Message sent to SNS topic' }),
+              'application/json': JSON.stringify({
+                message: 'Message sent to SNS topic',
+                requestId: '$context.requestId',
+              }),
+            },
+          },
+          {
+            selectionPattern: '4\\d{2}',
+            statusCode: '400',
+            responseTemplates: {
+              'application/json': JSON.stringify({
+                message: 'Invalid request',
+                errorType: "$util.escapeJavaScript($input.path('$.errorType'))",
+                errorMessage: "$util.escapeJavaScript($input.path('$.errorMessage'))",
+                requestId: '$context.requestId',
+              }),
+            },
+          },
+          {
+            selectionPattern: '5\\d{2}',
+            statusCode: '500',
+            responseTemplates: {
+              'application/json': JSON.stringify({
+                message: 'Internal server error',
+                errorType: "$util.escapeJavaScript($input.path('$.errorType'))",
+                errorMessage: "$util.escapeJavaScript($input.path('$.errorMessage'))",
+                requestId: '$context.requestId',
+              }),
             },
           },
         ],
@@ -93,7 +121,7 @@ export class FanoutConstruct extends Construct {
     });
 
     sendEventApiGatewayResource.addMethod('POST', apiIntegration, {
-      methodResponses: [{ statusCode: '200' }],
+      methodResponses: [{ statusCode: '200' }, { statusCode: '400' }, { statusCode: '500' }],
     });
 
     // Grant permissions to API Gateway to publish to SNS
