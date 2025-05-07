@@ -1,9 +1,9 @@
-import { FanoutConstruct } from 'aws-cdk-fanout';
+import { AwsRegion, AwsStage, FanoutConstruct } from 'aws-cdk-fanout';
 import { App, Stack, StackProps } from 'aws-cdk-lib';
 
 interface MyStackProps extends StackProps {
-  stage: string;
-  region: string;
+  stage: AwsStage;
+  region: AwsRegion;
 }
 
 export function createCdkStack(app: App, id: string, props: MyStackProps): Stack {

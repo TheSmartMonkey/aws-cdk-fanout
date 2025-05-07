@@ -1,4 +1,5 @@
 import { AwsRegion, AwsStage, StackName } from '@/models/contruct.model';
+import { FanoutConstructError } from '@/models/errors.model';
 import { aws_sns as sns } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ApiGatewayConstruct } from '../libs/api-gateway';
@@ -26,6 +27,10 @@ export class FanoutConstruct extends Construct {
 
   constructor(scope: Construct, id: string, props: FanoutConstructProps) {
     super(scope, id);
+
+    // Validate props
+    this.validateProps(props);
+
     const stackName: StackName = `${props.stage}-${id}`;
 
     // Create SNS Topic
@@ -44,5 +49,24 @@ export class FanoutConstruct extends Construct {
       stackName,
       snsTopic: this.topic,
     });
+  }
+
+  private validateProps(props: FanoutConstructProps): void {
+    if (!props.stage) {
+      throw new FanoutConstructError('STAGE_REQUIRED');
+    }
+
+    if (!props.stage.match(/^[a-zA-Z0-9-]+$/)) {
+      throw new FanoutConstructError('STAGE_MUST_CONTAIN_ONLY_ALPHANUMERIC_CHARACTERS_AND_HYPHENS');
+    }
+
+    if (!props.region) {
+      throw new FanoutConstructError('REGION_REQUIRED');
+    }
+
+    // region is already type-safe due to AwsRegion type, but we can add additional validation if needed
+    if (props.stage.length > 32) {
+      throw new FanoutConstructError('STAGE_NAME_CANNOT_EXCEED_32_CHARACTERS');
+    }
   }
 }
