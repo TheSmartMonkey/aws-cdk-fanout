@@ -1,5 +1,5 @@
 // Functions
-export * from '@/functions/fanout.construct';
+export * from '@/functions/fanout';
 
 // Models
-// export * from '@/models/hello.model';
+export * from '@/models/contruct.model';
