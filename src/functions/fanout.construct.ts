@@ -61,7 +61,22 @@ export class FanoutConstruct extends Construct {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
       },
+      apiKeySourceType: apigateway.ApiKeySourceType.HEADER,
     });
+
+    // Create our API Key
+    const apiKey = new apigateway.ApiKey(this, `${id}-api-key`);
+    const usagePlan = new apigateway.UsagePlan(this, `${id}-api-usage-plan`, {
+      name: 'Usage Plan',
+      apiStages: [
+        {
+          api,
+
+          stage: api.deploymentStage,
+        },
+      ],
+    });
+    usagePlan.addApiKey(apiKey);
 
     // Create API Gateway resource and method
     const sendEventApiGatewayResource = api.root.addResource('send-event');
@@ -129,6 +144,7 @@ export class FanoutConstruct extends Construct {
 
     sendEventApiGatewayResource.addMethod('POST', apiIntegration, {
       methodResponses: [{ statusCode: '200' }, { statusCode: '400' }, { statusCode: '500' }],
+      apiKeyRequired: true,
     });
 
     // Grant permissions to API Gateway to publish to SNS
