@@ -1,12 +1,13 @@
-import { StackName, AwsStage } from '@/models/contruct.model';
+import { StackName } from '@/models/contruct.model';
+import { AwsStage } from '@/models/public.model';
 import { aws_apigateway as apigateway, aws_iam as iam, aws_sns as sns } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ApiKeyConstruct } from './api-key';
 
-export interface ApiGatewayConstructProps {
-  stackName: StackName;
-  stage: AwsStage;
-  snsTopic: sns.Topic;
+interface ApiGatewayConstructProps {
+  readonly stackName: StackName;
+  readonly stage: AwsStage;
+  readonly snsTopic: sns.Topic;
 }
 
 export class ApiGatewayConstruct extends Construct {

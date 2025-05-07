@@ -2,4 +2,4 @@
 export * from '@/functions/fanout';
 
 // Models
-export * from '@/models/contruct.model';
+export * from '@/models/public.model';

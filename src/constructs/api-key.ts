@@ -2,9 +2,9 @@ import { StackName } from '@/models/contruct.model';
 import { aws_apigateway as apigateway } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
-export interface ApiKeyConstructProps {
-  stackName: StackName;
-  api: apigateway.RestApi;
+interface ApiKeyConstructProps {
+  readonly stackName: StackName;
+  readonly api: apigateway.RestApi;
 }
 
 export class ApiKeyConstruct extends Construct {

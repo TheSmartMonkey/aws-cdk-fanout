@@ -2,8 +2,8 @@ import { StackName } from '@/models/contruct.model';
 import { aws_iam as iam, aws_sns as sns } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
-export interface SnsTopicConstructProps {
-  stackName: StackName;
+interface SnsTopicConstructProps {
+  readonly stackName: StackName;
 }
 
 export class SnsTopicConstruct extends Construct {

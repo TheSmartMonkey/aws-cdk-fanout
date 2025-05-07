@@ -1,14 +1,29 @@
-import { AwsRegion, AwsStage, StackName } from '@/models/contruct.model';
-import { FanoutConstructError } from '@/models/errors.model';
-import { aws_sns as sns } from 'aws-cdk-lib';
+import { LambdaConstruct } from '@/constructs/lambda';
+import { LambdaRoleConstruct } from '@/constructs/lambda-role';
+import { StackName } from '@/models/contruct.model';
+import { AwsRegion, AwsStage } from '@/models/public.model';
+import { PropsService } from '@/services/props.service';
+import { Duration, aws_sns as sns } from 'aws-cdk-lib';
+import { NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
-import { ApiGatewayConstruct } from '../libs/api-gateway';
-import { SnsTopicConstruct } from '../libs/sns-topic';
-import { SqsQueuesConstruct } from '../libs/sqs-queues';
+import { ApiGatewayConstruct } from '../constructs/api-gateway';
+import { SnsTopicConstruct } from '../constructs/sns-topic';
+import { SqsConstruct } from '../constructs/sqs';
 
 export interface FanoutConstructProps {
-  stage: AwsStage;
-  region: AwsRegion;
+  readonly stage: AwsStage;
+  readonly region: AwsRegion;
+  readonly snsFilter: {
+    [attribute: string]: sns.FilterOrPolicy;
+  };
+  readonly envVars: Record<string, string>;
+  readonly handlerPath: string;
+  readonly lambdaName: string;
+  readonly sqsMaxBatchingWindow: Duration;
+  readonly sqsVisibilityTimeout: Duration;
+  readonly queueOptions?: sqs.QueueProps;
+  readonly lambdaOptions?: NodejsFunctionProps;
 }
 
 /**
@@ -21,52 +36,68 @@ export interface FanoutConstructProps {
  * @param id - The id of the construct. Used to name the resources.
  * @param props.stage - Your aws stage.
  * @param props.region - Your aws region eu-west-1, eu-west-2, etc.
+ * @param props.snsFilter - The filter for the SNS topic.
+ * @param props.envVars - The environment variables for the lambda function.
+ * @param props.sqsMaxBatchingWindow - The max batching window for the SQS queue.
+ * @param props.sqsVisibilityTimeout - The visibility timeout for the SQS queue.
+ * @param props.queueOptions - The options for the SQS queue.
+ * @param props.lambdaOptions - The options for the lambda function.
  */
 export class FanoutConstruct extends Construct {
   public readonly topic: sns.Topic;
+  public readonly stackName: StackName;
 
   constructor(scope: Construct, id: string, props: FanoutConstructProps) {
     super(scope, id);
+    const { snsFilter, queueOptions, sqsMaxBatchingWindow, sqsVisibilityTimeout, lambdaOptions, envVars, handlerPath, lambdaName } = props;
+    this.stackName = id;
 
     // Validate props
-    this.validateProps(props);
-
-    const stackName: StackName = `${props.stage}-${id}`;
+    const propsService = new PropsService(props);
+    propsService.validate();
 
     // Create SNS Topic
-    const snsConstruct = new SnsTopicConstruct(this, `${stackName}-sns`, { stackName });
+    const snsConstruct = new SnsTopicConstruct(this, `${this.stackName}-sns`, { stackName: this.stackName });
     this.topic = snsConstruct.topic;
 
     // Create API Gateway
-    new ApiGatewayConstruct(this, `${stackName}-api`, {
-      stackName,
+    new ApiGatewayConstruct(this, `${this.stackName}-api`, {
+      stackName: this.stackName,
       stage: props.stage,
       snsTopic: this.topic,
     });
 
-    // Create SQS Queue (this also creates the SNS subscription)
-    new SqsQueuesConstruct(this, `${stackName}-sqs`, {
-      stackName,
-      snsTopic: this.topic,
+    // Create SQS Failure DLQ
+    const sqsFailureDlq = new sqs.Queue(this, `${this.stackName}-sqs-failure-dlq`, {
+      queueName: `${this.stackName}-sqs-failure-dlq`,
+      retentionPeriod: Duration.days(14),
     });
-  }
 
-  private validateProps(props: FanoutConstructProps): void {
-    if (!props.stage) {
-      throw new FanoutConstructError('STAGE_REQUIRED');
-    }
+    // Create Lambda Role
+    const lambdaRole = new LambdaRoleConstruct(this, `${this.stackName}-lambda-role`, {
+      stackName: this.stackName,
+    });
 
-    if (!props.stage.match(/^[a-zA-Z0-9-]+$/)) {
-      throw new FanoutConstructError('STAGE_MUST_CONTAIN_ONLY_ALPHANUMERIC_CHARACTERS_AND_HYPHENS');
-    }
+    // Create Lambda Function
+    const lambdaFunction = new LambdaConstruct(this, `${this.stackName}-lambda`, {
+      name: lambdaName,
+      stackName: this.stackName,
+      lambdaRole: lambdaRole.role,
+      handlerPath,
+      envVars,
+      lambdaOptions,
+    });
 
-    if (!props.region) {
-      throw new FanoutConstructError('REGION_REQUIRED');
-    }
-
-    // region is already type-safe due to AwsRegion type, but we can add additional validation if needed
-    if (props.stage.length > 32) {
-      throw new FanoutConstructError('STAGE_NAME_CANNOT_EXCEED_32_CHARACTERS');
-    }
+    new SqsConstruct(this, `${this.stackName}-sqs-queue`, {
+      name: lambdaName,
+      stackName: this.stackName,
+      topic: this.topic,
+      lambdaFunction: lambdaFunction.lambdaFunction,
+      sqsFailureDlq,
+      snsFilter,
+      queueOptions,
+      maxBatchingWindow: sqsMaxBatchingWindow,
+      visibilityTimeout: sqsVisibilityTimeout,
+    });
   }
 }
