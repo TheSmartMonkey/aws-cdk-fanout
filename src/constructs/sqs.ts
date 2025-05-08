@@ -16,6 +16,7 @@ export interface SqsConstructProps {
   readonly snsFilter: {
     [attribute: string]: sns.FilterOrPolicy;
   };
+  readonly batchSize: number;
   readonly maxBatchingWindow: Duration;
   readonly visibilityTimeout: Duration;
   readonly queueOptions?: sqs.QueueProps;
@@ -27,7 +28,18 @@ export class SqsConstruct extends Construct {
 
   constructor(scope: Construct, id: string, props: SqsConstructProps) {
     super(scope, id);
-    const { name, stackName, topic, sqsFailureDlq, snsFilter, queueOptions, visibilityTimeout, lambdaFunction, maxBatchingWindow } = props;
+    const {
+      name,
+      stackName,
+      topic,
+      sqsFailureDlq,
+      snsFilter,
+      queueOptions,
+      visibilityTimeout,
+      lambdaFunction,
+      maxBatchingWindow,
+      batchSize,
+    } = props;
     const dlqName = `${stackName}-${name}-dlq`;
     const queueName = `${stackName}-${name}-queue`;
 
@@ -60,8 +72,7 @@ export class SqsConstruct extends Construct {
     this.queue.grantConsumeMessages(lambdaFunction);
     lambdaFunction.addEventSource(
       new SqsEventSource(this.queue, {
-        // TODO: Pass as required argument
-        batchSize: 100,
+        batchSize,
         reportBatchItemFailures: true,
         maxBatchingWindow,
       }),

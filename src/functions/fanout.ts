@@ -1,30 +1,13 @@
+import { ApiGatewayConstruct } from '@/constructs/api-gateway';
 import { LambdaConstruct } from '@/constructs/lambda';
 import { LambdaRoleConstruct } from '@/constructs/lambda-role';
+import { SnsTopicConstruct } from '@/constructs/sns-topic';
+import { SqsConstruct } from '@/constructs/sqs';
+import { FanoutConstructPropsEntity } from '@/entities/fanout-construct-props.entity';
 import { StackName } from '@/models/contruct.model';
-import { AwsRegion, AwsStage } from '@/models/public.model';
-import { PropsService } from '@/services/props.service';
 import { Duration, aws_sns as sns } from 'aws-cdk-lib';
-import { NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
-import { ApiGatewayConstruct } from '../constructs/api-gateway';
-import { SnsTopicConstruct } from '../constructs/sns-topic';
-import { SqsConstruct } from '../constructs/sqs';
-
-export interface FanoutConstructProps {
-  readonly stage: AwsStage;
-  readonly region: AwsRegion;
-  readonly snsFilter: {
-    [attribute: string]: sns.FilterOrPolicy;
-  };
-  readonly envVars: Record<string, string>;
-  readonly handlerPath: string;
-  readonly lambdaName: string;
-  readonly sqsMaxBatchingWindow: Duration;
-  readonly sqsVisibilityTimeout: Duration;
-  readonly queueOptions?: sqs.QueueProps;
-  readonly lambdaOptions?: NodejsFunctionProps;
-}
 
 /**
  * Fanout construct
@@ -34,27 +17,18 @@ export interface FanoutConstructProps {
  *
  * @param scope - The scope of the construct.
  * @param id - The id of the construct. Used to name the resources.
- * @param props.stage - Your aws stage.
- * @param props.region - Your aws region eu-west-1, eu-west-2, etc.
- * @param props.snsFilter - The filter for the SNS topic.
- * @param props.envVars - The environment variables for the lambda function.
- * @param props.sqsMaxBatchingWindow - The max batching window for the SQS queue.
- * @param props.sqsVisibilityTimeout - The visibility timeout for the SQS queue.
- * @param props.queueOptions - The options for the SQS queue.
- * @param props.lambdaOptions - The options for the lambda function.
+ * @param props - The props of the construct as a FanoutConstructPropsEntity.
  */
 export class FanoutConstruct extends Construct {
   public readonly topic: sns.Topic;
   public readonly stackName: StackName;
 
-  constructor(scope: Construct, id: string, props: FanoutConstructProps) {
+  constructor(scope: Construct, id: string, props: FanoutConstructPropsEntity) {
     super(scope, id);
-    const { snsFilter, queueOptions, sqsMaxBatchingWindow, sqsVisibilityTimeout, lambdaOptions, envVars, handlerPath, lambdaName } = props;
+    // const { snsFilter, queueOptions, sqsMaxBatchingWindow, sqsVisibilityTimeout, lambdaOptions, envVars, handlerPath, lambdaName } =
+    //   props.value;
+    const { stage, sqsToLambda } = props.value;
     this.stackName = id;
-
-    // Validate props
-    const propsService = new PropsService(props);
-    propsService.validate();
 
     // Create SNS Topic
     const snsConstruct = new SnsTopicConstruct(this, `${this.stackName}-sns`, { stackName: this.stackName });
@@ -63,7 +37,7 @@ export class FanoutConstruct extends Construct {
     // Create API Gateway
     new ApiGatewayConstruct(this, `${this.stackName}-api`, {
       stackName: this.stackName,
-      stage: props.stage,
+      stage,
       snsTopic: this.topic,
     });
 
@@ -78,26 +52,39 @@ export class FanoutConstruct extends Construct {
       stackName: this.stackName,
     });
 
-    // Create Lambda Function
-    const lambdaFunction = new LambdaConstruct(this, `${this.stackName}-lambda`, {
-      name: lambdaName,
-      stackName: this.stackName,
-      lambdaRole: lambdaRole.role,
-      handlerPath,
-      envVars,
-      lambdaOptions,
-    });
+    sqsToLambda.forEach((sqsToLambdaItem) => {
+      const {
+        lambdaName,
+        handlerPath,
+        envVars,
+        lambdaOptions,
+        snsFilter,
+        queueOptions,
+        sqsMaxBatchSize,
+        sqsMaxBatchingWindow,
+        sqsVisibilityTimeout,
+      } = sqsToLambdaItem.value;
+      const lambdaFunction = new LambdaConstruct(this, `${this.stackName}-lambda-${lambdaName}`, {
+        name: lambdaName,
+        stackName: this.stackName,
+        lambdaRole: lambdaRole.role,
+        handlerPath,
+        envVars,
+        lambdaOptions,
+      });
 
-    new SqsConstruct(this, `${this.stackName}-sqs-queue`, {
-      name: lambdaName,
-      stackName: this.stackName,
-      topic: this.topic,
-      lambdaFunction: lambdaFunction.lambdaFunction,
-      sqsFailureDlq,
-      snsFilter,
-      queueOptions,
-      maxBatchingWindow: sqsMaxBatchingWindow,
-      visibilityTimeout: sqsVisibilityTimeout,
+      new SqsConstruct(this, `${this.stackName}-sqs-queue-${lambdaName}`, {
+        name: lambdaName,
+        stackName: this.stackName,
+        topic: this.topic,
+        lambdaFunction: lambdaFunction.lambdaFunction,
+        sqsFailureDlq,
+        snsFilter,
+        queueOptions,
+        batchSize: sqsMaxBatchSize,
+        maxBatchingWindow: sqsMaxBatchingWindow,
+        visibilityTimeout: sqsVisibilityTimeout,
+      });
     });
   }
 }

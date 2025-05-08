@@ -11,7 +11,6 @@
   },
   "plugins": ["@typescript-eslint", "jest", "node", "prettier"],
   "rules": {
-    "indent": ["error", 2],
     "semi": ["warn", "always"],
     "no-console": "warn",
     "no-throw-literal": "error",

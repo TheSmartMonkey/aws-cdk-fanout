@@ -63,6 +63,7 @@ export class ApiGatewayConstruct extends Construct {
         },
         requestTemplates: {
           'application/json': `Action=Publish&TopicArn=$util.urlEncode('${props.snsTopic.topicArn}')&Message=$util.urlEncode($input.body)`,
+          // TODO: Remove x-www-form-urlencoded
           'application/x-www-form-urlencoded': `Action=Publish&TopicArn=$util.urlEncode('${props.snsTopic.topicArn}')&Message=$util.urlEncode($input.body)`,
         },
         integrationResponses: [
