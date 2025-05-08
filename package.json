@@ -16,7 +16,7 @@
     "format:check": "npx prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "pub": "npm run build && npm version patch && npm publish"
+    "pub": "npm version patch && npm run build && npm publish"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.194.0",
