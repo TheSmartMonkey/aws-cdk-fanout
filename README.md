@@ -1,6 +1,6 @@
 # AWS CDK Fanout Construct
 
-A powerful AWS CDK construct for implementing webhook fanout patterns with message filtering capabilities.
+CDK contruct for a Fanout pattern with Api Gateway > SNS > SQS > lambda
 
 [![npm version](https://badge.fury.io/js/aws-cdk-fanout.svg)](https://badge.fury.io/js/aws-cdk-fanout)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -14,7 +14,7 @@ The AWS CDK Fanout construct simplifies creating webhook fanout architectures in
 3. Route messages to multiple SQS queues based on filtering criteria
 4. Process messages with Lambda functions
 
-![Architecture Diagram](https://github.com/TheSmartMonkey/aws-cdk-fanout/raw/main/docs/architecture.png)
+![Architecture Diagram](https://github.com/TheSmartMonkey/aws-cdk-fanout/raw/main/docs/archi.png)
 
 ## Installation
 

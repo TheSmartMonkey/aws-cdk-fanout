@@ -1,7 +1,7 @@
 {
   "name": "aws-cdk-fanout",
-  "description": "Simple typescript app with jest to create a npm library with types",
-  "version": "0.0.1",
+  "description": "CDK contruct for a Fanout pattern with Api Gateway > SNS > SQS > lambda",
+  "version": "1.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -40,6 +40,9 @@
     "typescript": "^5.7.2"
   },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "bugs": {
     "url": "https://github.com/TheSmartMonkey/aws-cdk-fanout/issues"
   },
