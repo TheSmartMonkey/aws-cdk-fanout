@@ -23,8 +23,8 @@ export function createCdkStack(app: App, id: string, props: MyStackProps): Stack
         handlerPath: path.join(__dirname, 'handler.ts'),
         lambdaName: 'send-event',
         sqsMaxBatchSize: 10,
-        sqsMaxBatchingWindow: Duration.seconds(10),
         sqsVisibilityTimeout: Duration.seconds(30),
+        sqsMaxBatchingWindow: Duration.seconds(10),
       }),
       new SqsToLambdaPropsEntity({
         snsFilter: {
@@ -34,13 +34,12 @@ export function createCdkStack(app: App, id: string, props: MyStackProps): Stack
         handlerPath: path.join(__dirname, 'handler.ts'),
         lambdaName: 'receive-event',
         sqsMaxBatchSize: 10,
-        sqsMaxBatchingWindow: Duration.seconds(10),
         sqsVisibilityTimeout: Duration.seconds(30),
+        sqsMaxBatchingWindow: Duration.seconds(10),
       }),
     ],
   });
 
-  // SNS topic
   new FanoutConstruct(stack, id, fanoutConstructProps);
 
   return stack;

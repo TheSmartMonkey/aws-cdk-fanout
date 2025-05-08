@@ -11,7 +11,6 @@ export interface SqsConstructProps {
   readonly name: string;
   readonly stackName: StackName;
   readonly topic: sns.Topic;
-  readonly lambdaFunction: NodejsFunction;
   readonly sqsFailureDlq: sqs.Queue;
   readonly snsFilter: {
     [attribute: string]: sns.FilterOrPolicy;
@@ -19,6 +18,7 @@ export interface SqsConstructProps {
   readonly batchSize: number;
   readonly maxBatchingWindow: Duration;
   readonly visibilityTimeout: Duration;
+  readonly lambdaFunction?: NodejsFunction;
   readonly queueOptions?: sqs.QueueProps;
 }
 
@@ -40,13 +40,17 @@ export class SqsConstruct extends Construct {
       maxBatchingWindow,
       batchSize,
     } = props;
-    const dlqName = `${stackName}-${name}-dlq`;
-    const queueName = `${stackName}-${name}-queue`;
+    // TODO: handle fifo queues
+    const fifo = false;
+    const dlqName = fifo ? `${stackName}-${name}-dlq.fifo` : `${stackName}-${name}-dlq`;
+    const queueName = fifo ? `${stackName}-${name}.fifo` : `${stackName}-${name}-queue`;
 
-    // Dead Letter Queue
+    // Dead Letter Queue - set fifo property to match the main queue
     this.dlq = new sqs.Queue(this, dlqName, {
       queueName: dlqName,
       retentionPeriod: Duration.days(14),
+      fifo,
+      ...(fifo ? { contentBasedDeduplication: true } : {}),
     });
 
     // SQS Queue
@@ -57,6 +61,8 @@ export class SqsConstruct extends Construct {
         queue: this.dlq,
         maxReceiveCount: 3,
       },
+      fifo,
+      ...(fifo ? { contentBasedDeduplication: true } : {}),
       ...queueOptions,
     });
 
@@ -69,13 +75,15 @@ export class SqsConstruct extends Construct {
     );
 
     // Grant permissions and add event source
-    this.queue.grantConsumeMessages(lambdaFunction);
-    lambdaFunction.addEventSource(
-      new SqsEventSource(this.queue, {
-        batchSize,
-        reportBatchItemFailures: true,
-        maxBatchingWindow,
-      }),
-    );
+    if (lambdaFunction) {
+      this.queue.grantConsumeMessages(lambdaFunction);
+      lambdaFunction.addEventSource(
+        new SqsEventSource(this.queue, {
+          batchSize,
+          reportBatchItemFailures: true,
+          maxBatchingWindow: fifo ? undefined : maxBatchingWindow,
+        }),
+      );
+    }
   }
 }

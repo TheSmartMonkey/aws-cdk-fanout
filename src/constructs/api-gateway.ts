@@ -8,49 +8,66 @@ interface ApiGatewayConstructProps {
   readonly stackName: StackName;
   readonly stage: AwsStage;
   readonly snsTopic: sns.Topic;
+  readonly removeApiGatewayKeyAuth: boolean;
+  readonly fifo?: boolean;
 }
 
 export class ApiGatewayConstruct extends Construct {
   public readonly api: apigateway.RestApi;
-  public readonly apiKey: apigateway.ApiKey;
   public readonly apiGatewayRole: iam.Role;
 
   constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
     super(scope, id);
+    const { stackName, stage, snsTopic, removeApiGatewayKeyAuth, fifo } = props;
 
     // Create API Gateway
-    this.api = new apigateway.RestApi(this, `${props.stackName}-api`, {
-      restApiName: `${props.stackName}-api`,
+    this.api = new apigateway.RestApi(this, `${stackName}-api`, {
+      restApiName: `${stackName}-api`,
       description: 'This service receives webhook events and sends them to SNS',
       deployOptions: {
-        stageName: props.stage,
+        stageName: stage,
       },
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
       },
-      apiKeySourceType: apigateway.ApiKeySourceType.HEADER,
+      apiKeySourceType: removeApiGatewayKeyAuth ? undefined : apigateway.ApiKeySourceType.HEADER,
     });
 
     // Create API Key using the new construct
-    const apiKeyConstruct = new ApiKeyConstruct(this, `${props.stackName}-api-key`, {
-      stackName: props.stackName,
-      api: this.api,
-    });
-    this.apiKey = apiKeyConstruct.apiKey;
+    if (!removeApiGatewayKeyAuth) {
+      new ApiKeyConstruct(this, `${stackName}-api-key`, {
+        stackName,
+        api: this.api,
+      });
+    }
 
     // Create API Gateway resource and method
     const sendEventApiGatewayResource = this.api.root.addResource('send-event');
-    this.apiGatewayRole = new iam.Role(this, `${props.stackName}-api-gateway-role`, {
+    this.apiGatewayRole = new iam.Role(this, `${stackName}-api-gateway-role`, {
       assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
     });
 
     this.apiGatewayRole.addToPolicy(
       new iam.PolicyStatement({
         actions: ['sns:Publish'],
-        resources: [props.snsTopic.topicArn],
+        resources: [snsTopic.topicArn],
       }),
     );
+
+    // Build different request templates based on whether it's a FIFO topic or not
+    let requestTemplates;
+    if (fifo) {
+      requestTemplates = {
+        'application/json': `Action=Publish&TopicArn=$util.urlEncode('${snsTopic.topicArn}')&Message=$util.urlEncode($input.body)&MessageGroupId=$util.urlEncode($context.requestId)&MessageDeduplicationId=$util.urlEncode($context.requestId)`,
+        'application/x-www-form-urlencoded': `Action=Publish&TopicArn=$util.urlEncode('${snsTopic.topicArn}')&Message=$util.urlEncode($input.body)&MessageGroupId=$util.urlEncode($context.requestId)&MessageDeduplicationId=$util.urlEncode($context.requestId)`,
+      };
+    } else {
+      requestTemplates = {
+        'application/json': `Action=Publish&TopicArn=$util.urlEncode('${snsTopic.topicArn}')&Message=$util.urlEncode($input.body)`,
+        'application/x-www-form-urlencoded': `Action=Publish&TopicArn=$util.urlEncode('${snsTopic.topicArn}')&Message=$util.urlEncode($input.body)`,
+      };
+    }
 
     const apiIntegration = new apigateway.AwsIntegration({
       service: 'sns',
@@ -61,11 +78,7 @@ export class ApiGatewayConstruct extends Construct {
         requestParameters: {
           'integration.request.header.Content-Type': "'application/x-www-form-urlencoded'",
         },
-        requestTemplates: {
-          'application/json': `Action=Publish&TopicArn=$util.urlEncode('${props.snsTopic.topicArn}')&Message=$util.urlEncode($input.body)`,
-          // TODO: Remove x-www-form-urlencoded
-          'application/x-www-form-urlencoded': `Action=Publish&TopicArn=$util.urlEncode('${props.snsTopic.topicArn}')&Message=$util.urlEncode($input.body)`,
-        },
+        requestTemplates,
         integrationResponses: [
           {
             statusCode: '200',
@@ -106,10 +119,10 @@ export class ApiGatewayConstruct extends Construct {
 
     sendEventApiGatewayResource.addMethod('POST', apiIntegration, {
       methodResponses: [{ statusCode: '200' }, { statusCode: '400' }, { statusCode: '500' }],
-      apiKeyRequired: true,
+      apiKeyRequired: !removeApiGatewayKeyAuth,
     });
 
     // Grant permissions to API Gateway to publish to SNS
-    props.snsTopic.grantPublish(this.apiGatewayRole);
+    snsTopic.grantPublish(this.apiGatewayRole);
   }
 }

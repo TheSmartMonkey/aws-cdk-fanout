@@ -22,35 +22,44 @@ import { Construct } from 'constructs';
 export class FanoutConstruct extends Construct {
   public readonly topic: sns.Topic;
   public readonly stackName: StackName;
+  private lambdaRole?: LambdaRoleConstruct;
 
   constructor(scope: Construct, id: string, props: FanoutConstructPropsEntity) {
     super(scope, id);
-    // const { snsFilter, queueOptions, sqsMaxBatchingWindow, sqsVisibilityTimeout, lambdaOptions, envVars, handlerPath, lambdaName } =
-    //   props.value;
-    const { stage, sqsToLambda } = props.value;
+    const { stage, sqsToLambda, removeApiGateway, removeApiGatewayKeyAuth, removeLambda } = props.value;
+    // TODO: handle fifo queues
+    const fifo = false;
     this.stackName = id;
 
     // Create SNS Topic
-    const snsConstruct = new SnsTopicConstruct(this, `${this.stackName}-sns`, { stackName: this.stackName });
+    const snsConstruct = new SnsTopicConstruct(this, `${this.stackName}-sns`, { stackName: this.stackName, fifo: fifo ?? false });
     this.topic = snsConstruct.topic;
 
     // Create API Gateway
-    new ApiGatewayConstruct(this, `${this.stackName}-api`, {
-      stackName: this.stackName,
-      stage,
-      snsTopic: this.topic,
-    });
+    if (!removeApiGateway) {
+      new ApiGatewayConstruct(this, `${this.stackName}-api`, {
+        stackName: this.stackName,
+        stage,
+        snsTopic: this.topic,
+        removeApiGatewayKeyAuth: removeApiGatewayKeyAuth ?? false,
+        fifo: fifo ?? false,
+      });
+    }
 
     // Create SQS Failure DLQ
-    const sqsFailureDlq = new sqs.Queue(this, `${this.stackName}-sqs-failure-dlq`, {
-      queueName: `${this.stackName}-sqs-failure-dlq`,
+    const sqsFailureDlqName = fifo ? `${this.stackName}-sqs-failure-dlq.fifo` : `${this.stackName}-sqs-failure-dlq`;
+    const sqsFailureDlq = new sqs.Queue(this, sqsFailureDlqName, {
+      queueName: sqsFailureDlqName,
       retentionPeriod: Duration.days(14),
+      fifo: fifo ?? false,
     });
 
     // Create Lambda Role
-    const lambdaRole = new LambdaRoleConstruct(this, `${this.stackName}-lambda-role`, {
-      stackName: this.stackName,
-    });
+    if (!removeLambda) {
+      this.lambdaRole = new LambdaRoleConstruct(this, `${this.stackName}-lambda-role`, {
+        stackName: this.stackName,
+      });
+    }
 
     sqsToLambda.forEach((sqsToLambdaItem) => {
       const {
@@ -64,26 +73,30 @@ export class FanoutConstruct extends Construct {
         sqsMaxBatchingWindow,
         sqsVisibilityTimeout,
       } = sqsToLambdaItem.value;
-      const lambdaFunction = new LambdaConstruct(this, `${this.stackName}-lambda-${lambdaName}`, {
-        name: lambdaName,
-        stackName: this.stackName,
-        lambdaRole: lambdaRole.role,
-        handlerPath,
-        envVars,
-        lambdaOptions,
-      });
+
+      let lambdaFunction: LambdaConstruct | undefined;
+      if (!removeLambda) {
+        lambdaFunction = new LambdaConstruct(this, `${this.stackName}-lambda-${lambdaName}`, {
+          name: lambdaName,
+          stackName: this.stackName,
+          lambdaRole: this.lambdaRole!.role,
+          handlerPath,
+          envVars,
+          lambdaOptions,
+        });
+      }
 
       new SqsConstruct(this, `${this.stackName}-sqs-queue-${lambdaName}`, {
         name: lambdaName,
         stackName: this.stackName,
         topic: this.topic,
-        lambdaFunction: lambdaFunction.lambdaFunction,
         sqsFailureDlq,
         snsFilter,
-        queueOptions,
         batchSize: sqsMaxBatchSize,
         maxBatchingWindow: sqsMaxBatchingWindow,
         visibilityTimeout: sqsVisibilityTimeout,
+        lambdaFunction: lambdaFunction?.lambdaFunction,
+        queueOptions,
       });
     });
   }

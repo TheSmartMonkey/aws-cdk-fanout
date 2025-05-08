@@ -36,6 +36,7 @@ export class SqsToLambdaPropsEntity {
 
 /**
  * @description SqsToLambdaProps is the properties for the SqsToLambda construct.
+ *
  * @property snsFilter - The SNS filter for the SNS topic.
  * @property envVars - The environment variables for the Lambda function.
  * @property handlerPath - The path to the handler for the Lambda function.
@@ -47,15 +48,51 @@ export class SqsToLambdaPropsEntity {
  * @property lambdaOptions - To override the default options for the Lambda function.
  */
 export type SqsToLambdaProps = {
+  /**
+   * The SNS filter for the SNS topic.
+   * @example { eventType: sns.FilterOrPolicy }
+   */
   snsFilter: {
     [attribute: string]: sns.FilterOrPolicy;
   };
+  /**
+   * The environment variables for the Lambda function.
+   * @example { key: 'value' }
+   */
   envVars: Record<string, string>;
+  /**
+   * The path to the handler for the Lambda function.
+   * @example 'path/to/handler'
+   */
   handlerPath: string;
+  /**
+   * The name of the Lambda function.
+   * @example 'lambdaFunctionName'
+   */
   lambdaName: string;
+  /**
+   * The maximum batch size for the SQS queue (1-10000 messages).
+   * @example 10
+   */
   sqsMaxBatchSize: number;
-  sqsMaxBatchingWindow: Duration;
+  /**
+   * The visibility timeout for the SQS queue (0-12 hours).
+   * @example Duration.seconds(90)
+   */
   sqsVisibilityTimeout: Duration;
+  /**
+   * The maximum batching window for the SQS queue (0-5 minutes).
+   * @example Duration.seconds(10)
+   */
+  sqsMaxBatchingWindow: Duration;
+  /**
+   * To override the default options for the SQS queue.
+   * @optional
+   */
   queueOptions?: sqs.QueueProps;
+  /**
+   * To override the default options for the Lambda function.
+   * @optional
+   */
   lambdaOptions?: NodejsFunctionProps;
 };
