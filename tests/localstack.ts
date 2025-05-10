@@ -3,46 +3,50 @@ import { LocalstackContainer, StartedLocalStackContainer } from '@testcontainers
 import { LOCALSTACK_PORT } from './helpers';
 import { initSqs, QUEUE_NAME } from './sqs';
 
-export class LocalStackSingleton {
-  private static instance?: StartedLocalStackContainer;
+export class LocalStackClient {
+  private static instance?: LocalStackClient;
+  private readonly localstackContainer: StartedLocalStackContainer;
 
-  private constructor() {}
+  private constructor(container: StartedLocalStackContainer) {
+    this.localstackContainer = container;
+  }
 
-  public static async getInstance(): Promise<StartedLocalStackContainer> {
-    if (LocalStackSingleton.instance) return LocalStackSingleton.instance;
+  public static async getInstance(): Promise<LocalStackClient> {
+    if (!LocalStackClient.instance) {
+      console.log('🚀 Starting LocalStack container...');
+      const container = await new LocalstackContainer('localstack/localstack:3').withExposedPorts(LOCALSTACK_PORT).start();
+      console.log(`🚀 LocalStack started at: ${container.getConnectionUri()} !`);
 
-    console.log('🚀 Starting LocalStack container...');
-    LocalStackSingleton.instance = await new LocalstackContainer('localstack/localstack:3').withExposedPorts(LOCALSTACK_PORT).start();
-    console.log(`🚀 LocalStack started at: ${LocalStackSingleton.instance.getConnectionUri()} !`);
+      LocalStackClient.instance = new LocalStackClient(container);
+    }
+    return LocalStackClient.instance;
+  }
 
-    // Create SQS client
-    console.log('🔧 Creating stack...');
-    const sqsClient = initSqs(LocalStackSingleton.instance.getConnectionUri());
+  public async initStack(): Promise<void> {
+    console.log('🔧 Initializing stack...');
+    const sqsClient = initSqs(this.localstackContainer.getConnectionUri());
 
-    // Create a new SQS queue
     const createQueueResponse = await sqsClient.send(
       new CreateQueueCommand({
         QueueName: QUEUE_NAME,
         Attributes: {
           DelaySeconds: '0',
-          MessageRetentionPeriod: '86400', // 24 hours
+          MessageRetentionPeriod: '86400',
         },
       }),
     );
 
-    const queueUrl = createQueueResponse.QueueUrl;
-    console.log(`🔧 SQS Queue created successfully: ${queueUrl}`);
+    console.log(`🔧 SQS Queue created successfully: ${createQueueResponse.QueueUrl}`);
     console.log('🔧 Stack is ready !');
-    return LocalStackSingleton.instance;
   }
 
-  public static async stopInstance(): Promise<void> {
-    if (!LocalStackSingleton.instance) {
+  public async stop(): Promise<void> {
+    if (!this.localstackContainer) {
       console.log('❌ No LocalStack container to stop !');
       return;
     }
-    await LocalStackSingleton.instance.stop();
-    LocalStackSingleton.instance = undefined;
+    await this.localstackContainer.stop();
+    LocalStackClient.instance = undefined;
     console.log('🧹 LocalStack container stopped !');
   }
 }

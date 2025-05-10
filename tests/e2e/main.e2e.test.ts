@@ -1,23 +1,26 @@
-import { LocalStackSingleton } from './localstack';
-import { deleteAllSqsMessages, getSqsMessages, initSqs, sendSqsMessages } from './sqs';
+import { LocalStackClient } from '../localstack';
+import { deleteAllSqsMessages, getSqsMessages, initSqs, sendSqsMessages } from '../sqs';
 
 jest.setTimeout(60000);
 
-describe('Sqs e2e 2', () => {
+describe('Main e2e', () => {
+  let localStackSingleton: LocalStackClient;
+
   beforeAll(async () => {
-    await LocalStackSingleton.getInstance();
+    localStackSingleton = await LocalStackClient.getInstance();
+    await localStackSingleton.initStack();
     initSqs();
   });
 
   afterAll(async () => {
-    await LocalStackSingleton.stopInstance();
+    await localStackSingleton.stop();
   });
 
   beforeEach(async () => {
     await deleteAllSqsMessages();
   });
 
-  test('should sqs2 send 2 sqs messages', async () => {
+  test('should send a api gateway request and receive a response in lambda logs', async () => {
     // Given
     const message1 = { message: 'fakeMessage1' };
     const message2 = { message: 'fakeMessage2' };
