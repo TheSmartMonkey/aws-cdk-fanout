@@ -1,7 +1,9 @@
-import { CreateQueueCommand } from '@aws-sdk/client-sqs';
+import { FanoutConstruct, FanoutConstructPropsEntity, SqsToLambdaPropsEntity } from '@/index';
 import { LocalstackContainer, StartedLocalStackContainer } from '@testcontainers/localstack';
-import { LOCALSTACK_PORT } from './helpers';
-import { initSqs, QUEUE_NAME } from './sqs';
+import { App, Duration, Stack } from 'aws-cdk-lib';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as path from 'path';
+import { AWS_REGION, LOCALSTACK_PORT } from './helpers';
 
 export class LocalStackClient {
   private static instance?: LocalStackClient;
@@ -24,19 +26,40 @@ export class LocalStackClient {
 
   public async initStack(): Promise<void> {
     console.log('🔧 Initializing stack...');
-    const sqsClient = initSqs(this.localstackContainer.getConnectionUri());
+    const app = new App();
+    const stack = new Stack(app, 'test-stack');
 
-    const createQueueResponse = await sqsClient.send(
-      new CreateQueueCommand({
-        QueueName: QUEUE_NAME,
-        Attributes: {
-          DelaySeconds: '0',
-          MessageRetentionPeriod: '86400',
-        },
-      }),
-    );
+    const fanoutConstructProps = new FanoutConstructPropsEntity({
+      stage: 'test',
+      region: AWS_REGION,
+      removeLambda: true,
+      sqsToLambda: [
+        new SqsToLambdaPropsEntity({
+          snsFilter: {
+            eventType: this.snsFiltersIncludes(['send']),
+          },
+          envVars: {},
+          handlerPath: path.join(__dirname, 'handler.ts'),
+          lambdaName: 'send-event',
+          sqsMaxBatchSize: 10,
+          sqsVisibilityTimeout: Duration.seconds(30),
+          sqsMaxBatchingWindow: Duration.seconds(10),
+        }),
+        new SqsToLambdaPropsEntity({
+          snsFilter: {
+            eventType: this.snsFiltersIncludes(['receive']),
+          },
+          envVars: {},
+          handlerPath: path.join(__dirname, 'handler.ts'),
+          lambdaName: 'receive-event',
+          sqsMaxBatchSize: 10,
+          sqsVisibilityTimeout: Duration.seconds(30),
+          sqsMaxBatchingWindow: Duration.seconds(10),
+        }),
+      ],
+    });
 
-    console.log(`🔧 SQS Queue created successfully: ${createQueueResponse.QueueUrl}`);
+    new FanoutConstruct(stack, 'test-fanout', fanoutConstructProps);
     console.log('🔧 Stack is ready !');
   }
 
@@ -45,8 +68,13 @@ export class LocalStackClient {
       console.log('❌ No LocalStack container to stop !');
       return;
     }
+    console.log('🧹 Stopping LocalStack container...');
     await this.localstackContainer.stop();
     LocalStackClient.instance = undefined;
     console.log('🧹 LocalStack container stopped !');
+  }
+
+  private snsFiltersIncludes(allowlist: string[]): sns.FilterOrPolicy {
+    return sns.FilterOrPolicy.filter(sns.SubscriptionFilter.stringFilter({ allowlist }));
   }
 }

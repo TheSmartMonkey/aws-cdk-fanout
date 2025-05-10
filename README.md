@@ -177,3 +177,42 @@ new FanoutConstruct(this, 'WebhooksFanout', new FanoutConstructPropsEntity({
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/TheSmartMonkey/aws-cdk-fanout/blob/main/LICENSE) file for details.
+
+## Testing
+
+### Testing the Fanout Filtering
+
+The construct supports filtering messages based on the `eventType` field. You can test this functionality using the provided test:
+
+```typescript
+import { LocalStackClient } from './tests/localstack';
+
+// Initialize LocalStack
+const localStackClient = await LocalStackClient.getInstance();
+await localStackClient.initStack();
+
+// Get the filter configurations
+const sendEventFilterConfig = localStackClient.getFilterConfig('send-event');
+const receiveEventFilterConfig = localStackClient.getFilterConfig('receive-event');
+
+// Verify that messages are routed correctly based on eventType
+const message = { 
+  eventType: 'send',
+  data: { /* your payload */ }
+};
+
+// In a real scenario, you would send this message to the API Gateway endpoint:
+// POST /send-event with the message as the body
+```
+
+When a message with `eventType: "send"` is sent to the API Gateway, it will be published to the SNS topic, and then filtered to the appropriate SQS queue that triggers the Lambda with the `send-event` name.
+
+### Running E2E Tests
+
+To run the end-to-end tests with LocalStack:
+
+```bash
+npm test tests/e2e/api-gateway.e2e.test.ts
+```
+
+This test verifies that messages with `eventType: "send"` are correctly routed to the Lambda function named `send-event`.

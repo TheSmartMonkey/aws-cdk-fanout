@@ -52,6 +52,7 @@ export type FanoutConstructProps = {
   /**
    * Whether to remove the Lambda function (default: false).
    * @default false
+   * TODO: put this in the sqsToLambda array
    */
   removeLambda?: boolean;
 };
