@@ -1,0 +1,32 @@
+name: Run LocalStack with Testcontainers
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: eu-central-1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm i
+
+      - name: Run tests with LocalStack
+        run: npm run test
+
+      # Optional: Save logs if the container fails
+      - name: Upload logs on failure
+        if: failure()
+        run: docker logs $(docker ps -q) || true

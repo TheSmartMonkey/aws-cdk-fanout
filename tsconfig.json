@@ -19,10 +19,11 @@
     "declaration": true,
     "declarationDir": "./dist",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@test/*": ["./tests/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "tests"],
   "exclude": ["node_modules/**/*", ".webpack/**/*", "_warmup/**/*", ".vscode/**/*", "jest.config.ts", "debug/**/*"],
   "ts-node": {
     "require": ["tsconfig-paths/register"]
