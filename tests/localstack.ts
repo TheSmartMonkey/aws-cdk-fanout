@@ -1,36 +1,48 @@
 import { CreateQueueCommand } from '@aws-sdk/client-sqs';
 import { LocalstackContainer, StartedLocalStackContainer } from '@testcontainers/localstack';
+import { LOCALSTACK_PORT } from './helpers';
 import { initSqs, QUEUE_NAME } from './sqs';
-import { LOCALSTACK_PORT } from './test';
 
-let localstackClient: StartedLocalStackContainer;
+export class LocalStackSingleton {
+  private static instance?: StartedLocalStackContainer;
 
-export async function startLocalstack(): Promise<StartedLocalStackContainer> {
-  // Start LocalStack container
-  if (localstackClient) return localstackClient;
-  localstackClient = await new LocalstackContainer('localstack/localstack:3').withExposedPorts(LOCALSTACK_PORT).start();
+  private constructor() {}
 
-  console.log(`LocalStack started at: ${localstackClient.getConnectionUri()}`);
+  public static async getInstance(): Promise<StartedLocalStackContainer> {
+    if (LocalStackSingleton.instance) return LocalStackSingleton.instance;
 
-  // Create SQS client
-  const sqsClient = initSqs(localstackClient.getConnectionUri());
+    console.log('🚀 Starting LocalStack container...');
+    LocalStackSingleton.instance = await new LocalstackContainer('localstack/localstack:3').withExposedPorts(LOCALSTACK_PORT).start();
+    console.log(`🚀 LocalStack started at: ${LocalStackSingleton.instance.getConnectionUri()} !`);
 
-  // Create a new SQS queue
-  const createQueueResponse = await sqsClient.send(
-    new CreateQueueCommand({
-      QueueName: QUEUE_NAME,
-      Attributes: {
-        DelaySeconds: '0',
-        MessageRetentionPeriod: '86400', // 24 hours
-      },
-    }),
-  );
+    // Create SQS client
+    console.log('🔧 Creating stack...');
+    const sqsClient = initSqs(LocalStackSingleton.instance.getConnectionUri());
 
-  const queueUrl = createQueueResponse.QueueUrl;
-  console.log(`SQS Queue created successfully: ${queueUrl}`);
-  return localstackClient;
-}
+    // Create a new SQS queue
+    const createQueueResponse = await sqsClient.send(
+      new CreateQueueCommand({
+        QueueName: QUEUE_NAME,
+        Attributes: {
+          DelaySeconds: '0',
+          MessageRetentionPeriod: '86400', // 24 hours
+        },
+      }),
+    );
 
-export async function stopLocalstack(): Promise<void> {
-  await localstackClient.stop();
+    const queueUrl = createQueueResponse.QueueUrl;
+    console.log(`🔧 SQS Queue created successfully: ${queueUrl}`);
+    console.log('🔧 Stack is ready !');
+    return LocalStackSingleton.instance;
+  }
+
+  public static async stopInstance(): Promise<void> {
+    if (!LocalStackSingleton.instance) {
+      console.log('❌ No LocalStack container to stop !');
+      return;
+    }
+    await LocalStackSingleton.instance.stop();
+    LocalStackSingleton.instance = undefined;
+    console.log('🧹 LocalStack container stopped !');
+  }
 }

@@ -12,7 +12,6 @@
   "plugins": ["@typescript-eslint", "jest", "node", "prettier"],
   "rules": {
     "semi": ["warn", "always"],
-    "no-console": "warn",
     "no-throw-literal": "error",
     "jest/no-disabled-tests": "warn",
     "jest/no-focused-tests": "error",

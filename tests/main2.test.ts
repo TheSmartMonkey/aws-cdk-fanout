@@ -3,7 +3,7 @@ import { deleteAllSqsMessages, getSqsMessages, initSqs, sendSqsMessages } from '
 
 jest.setTimeout(60000);
 
-describe('Sqs e2e', () => {
+describe('Sqs e2e 2', () => {
   beforeAll(async () => {
     await LocalStackSingleton.getInstance();
     initSqs();
@@ -17,7 +17,7 @@ describe('Sqs e2e', () => {
     await deleteAllSqsMessages();
   });
 
-  test('should send 2 sqs messages', async () => {
+  test('should sqs2 send 2 sqs messages', async () => {
     // Given
     const message1 = { message: 'fakeMessage1' };
     const message2 = { message: 'fakeMessage2' };

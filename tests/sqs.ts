@@ -6,7 +6,7 @@ import {
   SendMessageBatchRequestEntry,
   SQSClient,
 } from '@aws-sdk/client-sqs';
-import { AWS_REGION, LOCALSTACK_ENDPOINT, randomUUID } from './test';
+import { AWS_REGION, LOCALSTACK_ENDPOINT, randomUUID } from './helpers';
 
 export const QUEUE_NAME = 'my-test-queue';
 let sqsClient: SQSClient;
@@ -33,7 +33,7 @@ export async function getSqsMessages(): Promise<Message[]> {
   return formatSqsRecevedMessages(Messages || []);
 }
 
-export async function deleteAllSqsMessages() {
+export async function deleteAllSqsMessages(): Promise<void> {
   initSqs();
   const cmd = new PurgeQueueCommand({
     QueueUrl: QUEUE_URL,

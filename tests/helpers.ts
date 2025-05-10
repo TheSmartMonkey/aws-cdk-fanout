@@ -1,10 +1,11 @@
+import { Message } from '@aws-sdk/client-sqs';
 import crypto from 'crypto';
 
 export const AWS_REGION = 'eu-central-1';
 export const LOCALSTACK_PORT = 4566;
 export const LOCALSTACK_ENDPOINT = `http://localhost:${LOCALSTACK_PORT}`;
 
-export function fakeSqsMessage(message: any) {
+export function fakeSqsMessage<T>(message: T): Message {
   const body = {
     Type: 'Notification',
     MessageId: '666733c2-938f-4723-8e6b-923493e1a3b5',

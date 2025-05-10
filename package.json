@@ -15,7 +15,7 @@
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "test": "jest --maxWorkers=1",
     "pub": "npm version patch && npm run build && npm publish"
   },
   "dependencies": {
