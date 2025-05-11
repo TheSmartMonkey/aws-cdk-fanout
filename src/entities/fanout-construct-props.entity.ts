@@ -19,7 +19,6 @@ export class FanoutConstructPropsEntity {
  * @property stage - The stage of the construct.
  * @property region - The region of the construct.
  * @property sqsToLambda - The SQS to Lambda mappings for the construct.
- * @property fifo - Whether to create a FIFO topic and sqs queues (default: false).
  * @property removeApiGateway - Whether to remove the API Gateway (default: false).
  * @property removeApiGatewayKeyAuth - Whether to remove the API Gateway key auth (default: false).
  * @property removeLambda - Whether to remove the Lambda function (default: false).
