@@ -23,6 +23,9 @@
     "constructs": "^10.4.2"
   },
   "devDependencies": {
+    "@aws-sdk/client-api-gateway": "^3.806.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.807.0",
+    "@aws-sdk/client-sns": "^3.806.0",
     "@aws-sdk/client-sqs": "^3.806.0",
     "@jest/globals": "^29.7.0",
     "@testcontainers/localstack": "^10.25.0",
@@ -30,6 +33,7 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.0",
     "@typescript-eslint/eslint-plugin": "^8.16.0",
+    "axios": "^1.9.0",
     "eslint": "^8.30.0",
     "eslint-plugin-jest": "^28.9.0",
     "eslint-plugin-node": "^11.1.0",

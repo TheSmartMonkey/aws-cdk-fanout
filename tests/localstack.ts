@@ -1,48 +1,80 @@
-import { CreateQueueCommand } from '@aws-sdk/client-sqs';
+import { FanoutConstruct, FanoutConstructPropsEntity, SqsToLambdaPropsEntity } from '@/index';
 import { LocalstackContainer, StartedLocalStackContainer } from '@testcontainers/localstack';
-import { LOCALSTACK_PORT } from './helpers';
-import { initSqs, QUEUE_NAME } from './sqs';
+import { App, Duration, Stack } from 'aws-cdk-lib';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as path from 'path';
+import { AWS_REGION, LOCALSTACK_PORT } from './helpers';
 
-export class LocalStackSingleton {
-  private static instance?: StartedLocalStackContainer;
+export class LocalStackClient {
+  private static instance?: LocalStackClient;
+  private readonly localstackContainer: StartedLocalStackContainer;
 
-  private constructor() {}
-
-  public static async getInstance(): Promise<StartedLocalStackContainer> {
-    if (LocalStackSingleton.instance) return LocalStackSingleton.instance;
-
-    console.log('🚀 Starting LocalStack container...');
-    LocalStackSingleton.instance = await new LocalstackContainer('localstack/localstack:3').withExposedPorts(LOCALSTACK_PORT).start();
-    console.log(`🚀 LocalStack started at: ${LocalStackSingleton.instance.getConnectionUri()} !`);
-
-    // Create SQS client
-    console.log('🔧 Creating stack...');
-    const sqsClient = initSqs(LocalStackSingleton.instance.getConnectionUri());
-
-    // Create a new SQS queue
-    const createQueueResponse = await sqsClient.send(
-      new CreateQueueCommand({
-        QueueName: QUEUE_NAME,
-        Attributes: {
-          DelaySeconds: '0',
-          MessageRetentionPeriod: '86400', // 24 hours
-        },
-      }),
-    );
-
-    const queueUrl = createQueueResponse.QueueUrl;
-    console.log(`🔧 SQS Queue created successfully: ${queueUrl}`);
-    console.log('🔧 Stack is ready !');
-    return LocalStackSingleton.instance;
+  private constructor(container: StartedLocalStackContainer) {
+    this.localstackContainer = container;
   }
 
-  public static async stopInstance(): Promise<void> {
-    if (!LocalStackSingleton.instance) {
+  public static async getInstance(): Promise<LocalStackClient> {
+    if (!LocalStackClient.instance) {
+      console.log('🚀 Starting LocalStack container...');
+      const container = await new LocalstackContainer('localstack/localstack:3').withExposedPorts(LOCALSTACK_PORT).start();
+      console.log(`🚀 LocalStack started at: ${container.getConnectionUri()} !`);
+
+      LocalStackClient.instance = new LocalStackClient(container);
+    }
+    return LocalStackClient.instance;
+  }
+
+  public async initStack(): Promise<void> {
+    console.log('🔧 Initializing stack...');
+    const app = new App();
+    const stack = new Stack(app, 'test-stack');
+
+    const fanoutConstructProps = new FanoutConstructPropsEntity({
+      stage: 'test',
+      region: AWS_REGION,
+      removeLambda: true,
+      sqsToLambda: [
+        new SqsToLambdaPropsEntity({
+          snsFilter: {
+            eventType: this.snsFiltersIncludes(['send']),
+          },
+          envVars: {},
+          handlerPath: path.join(__dirname, 'handler.ts'),
+          lambdaName: 'send-event',
+          sqsMaxBatchSize: 10,
+          sqsVisibilityTimeout: Duration.seconds(30),
+          sqsMaxBatchingWindow: Duration.seconds(10),
+        }),
+        new SqsToLambdaPropsEntity({
+          snsFilter: {
+            eventType: this.snsFiltersIncludes(['receive']),
+          },
+          envVars: {},
+          handlerPath: path.join(__dirname, 'handler.ts'),
+          lambdaName: 'receive-event',
+          sqsMaxBatchSize: 10,
+          sqsVisibilityTimeout: Duration.seconds(30),
+          sqsMaxBatchingWindow: Duration.seconds(10),
+        }),
+      ],
+    });
+
+    new FanoutConstruct(stack, 'test-fanout', fanoutConstructProps);
+    console.log('🔧 Stack is ready !');
+  }
+
+  public async stop(): Promise<void> {
+    if (!this.localstackContainer) {
       console.log('❌ No LocalStack container to stop !');
       return;
     }
-    await LocalStackSingleton.instance.stop();
-    LocalStackSingleton.instance = undefined;
+    console.log('🧹 Stopping LocalStack container...');
+    await this.localstackContainer.stop();
+    LocalStackClient.instance = undefined;
     console.log('🧹 LocalStack container stopped !');
+  }
+
+  private snsFiltersIncludes(allowlist: string[]): sns.FilterOrPolicy {
+    return sns.FilterOrPolicy.filter(sns.SubscriptionFilter.stringFilter({ allowlist }));
   }
 }

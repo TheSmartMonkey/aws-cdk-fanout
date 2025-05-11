@@ -7,6 +7,7 @@ export default {
   coverageReporters: ['json', 'lcov', 'clover', 'cobertura'],
   moduleNameMapper: {
     '@/(.*)': '<rootDir>/src/$1',
+    '@test/(.*)': '<rootDir>/tests/$1',
   },
   reporters: ['default'],
   roots: ['<rootDir>'],
