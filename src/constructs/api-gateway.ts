@@ -9,7 +9,6 @@ interface ApiGatewayConstructProps {
   readonly stage: AwsStage;
   readonly snsTopic: sns.Topic;
   readonly removeApiGatewayKeyAuth: boolean;
-  readonly fifo?: boolean;
 }
 
 export class ApiGatewayConstruct extends Construct {
@@ -18,7 +17,7 @@ export class ApiGatewayConstruct extends Construct {
 
   constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
     super(scope, id);
-    const { stackName, stage, snsTopic, removeApiGatewayKeyAuth, fifo } = props;
+    const { stackName, stage, snsTopic, removeApiGatewayKeyAuth } = props;
 
     // Create API Gateway
     this.api = new apigateway.RestApi(this, `${stackName}-api`, {
@@ -55,20 +54,6 @@ export class ApiGatewayConstruct extends Construct {
       }),
     );
 
-    // Build different request templates based on whether it's a FIFO topic or not
-    let requestTemplates;
-    if (fifo) {
-      requestTemplates = {
-        'application/json': `Action=Publish&TopicArn=$util.urlEncode('${snsTopic.topicArn}')&Message=$util.urlEncode($input.body)&MessageGroupId=$util.urlEncode($context.requestId)&MessageDeduplicationId=$util.urlEncode($context.requestId)`,
-        'application/x-www-form-urlencoded': `Action=Publish&TopicArn=$util.urlEncode('${snsTopic.topicArn}')&Message=$util.urlEncode($input.body)&MessageGroupId=$util.urlEncode($context.requestId)&MessageDeduplicationId=$util.urlEncode($context.requestId)`,
-      };
-    } else {
-      requestTemplates = {
-        'application/json': `Action=Publish&TopicArn=$util.urlEncode('${snsTopic.topicArn}')&Message=$util.urlEncode($input.body)`,
-        'application/x-www-form-urlencoded': `Action=Publish&TopicArn=$util.urlEncode('${snsTopic.topicArn}')&Message=$util.urlEncode($input.body)`,
-      };
-    }
-
     const apiIntegration = new apigateway.AwsIntegration({
       service: 'sns',
       action: 'Publish',
@@ -78,7 +63,10 @@ export class ApiGatewayConstruct extends Construct {
         requestParameters: {
           'integration.request.header.Content-Type': "'application/x-www-form-urlencoded'",
         },
-        requestTemplates,
+        requestTemplates: {
+          'application/json': `Action=Publish&TopicArn=$util.urlEncode('${snsTopic.topicArn}')&Message=$util.urlEncode($input.body)`,
+          'application/x-www-form-urlencoded': `Action=Publish&TopicArn=$util.urlEncode('${snsTopic.topicArn}')&Message=$util.urlEncode($input.body)`,
+        },
         integrationResponses: [
           {
             statusCode: '200',

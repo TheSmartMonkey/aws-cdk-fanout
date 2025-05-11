@@ -27,12 +27,10 @@ export class FanoutConstruct extends Construct {
   constructor(scope: Construct, id: string, props: FanoutConstructPropsEntity) {
     super(scope, id);
     const { stage, sqsToLambda, removeApiGateway, removeApiGatewayKeyAuth, removeLambda } = props.value;
-    // TODO: handle fifo queues
-    const fifo = false;
     this.stackName = id;
 
     // Create SNS Topic
-    const snsConstruct = new SnsTopicConstruct(this, `${this.stackName}-sns`, { stackName: this.stackName, fifo: fifo ?? false });
+    const snsConstruct = new SnsTopicConstruct(this, `${this.stackName}-sns`, { stackName: this.stackName });
     this.topic = snsConstruct.topic;
 
     // Create API Gateway
@@ -42,16 +40,14 @@ export class FanoutConstruct extends Construct {
         stage,
         snsTopic: this.topic,
         removeApiGatewayKeyAuth: removeApiGatewayKeyAuth ?? false,
-        fifo: fifo ?? false,
       });
     }
 
     // Create SQS Failure DLQ
-    const sqsFailureDlqName = fifo ? `${this.stackName}-sqs-failure-dlq.fifo` : `${this.stackName}-sqs-failure-dlq`;
+    const sqsFailureDlqName = `${this.stackName}-sqs-failure-dlq`;
     const sqsFailureDlq = new sqs.Queue(this, sqsFailureDlqName, {
       queueName: sqsFailureDlqName,
       retentionPeriod: Duration.days(14),
-      fifo: fifo ?? false,
     });
 
     // Create Lambda Role

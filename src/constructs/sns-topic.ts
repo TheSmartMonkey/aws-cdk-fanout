@@ -4,7 +4,6 @@ import { Construct } from 'constructs';
 
 interface SnsTopicConstructProps {
   readonly stackName: StackName;
-  readonly fifo: boolean;
 }
 
 export class SnsTopicConstruct extends Construct {
@@ -12,14 +11,13 @@ export class SnsTopicConstruct extends Construct {
 
   constructor(scope: Construct, id: string, props: SnsTopicConstructProps) {
     super(scope, id);
-    const { stackName, fifo } = props;
-    const topicName = fifo ? `${stackName}-topic.fifo` : `${stackName}-topic`;
+    const { stackName } = props;
+    const topicName = `${stackName}-topic`;
 
     // SNS topic
     this.topic = new sns.Topic(this, topicName, {
       displayName: topicName,
       topicName,
-      fifo,
     });
 
     new sns.TopicPolicy(this, `${stackName}-topic-policy`, {
